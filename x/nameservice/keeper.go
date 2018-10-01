@@ -14,6 +14,14 @@ type Keeper struct {
 	cdc *codec.Codec // The codec codec for binary encoding/decoding.
 }
 
+func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, bk bank.Keeper) Keeper {
+	return Keeper{
+		bk:  bk,
+		key: key,
+		cdc: cdc,
+	}
+}
+
 // GetTrend - returns the current cool trend
 func (k Keeper) GetValue(ctx sdk.Context, domain string) string {
 	store := ctx.KVStore(k.key)
