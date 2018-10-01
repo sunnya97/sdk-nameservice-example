@@ -86,6 +86,7 @@ func NewNSApp(logger log.Logger, db dbm.DB) *NSApp {
 
 func MakeCodec() *codec.Codec {
 	var cdc = codec.New()
+	auth.RegisterCodec(cdc)
 	bank.RegisterCodec(cdc)
 	nameservice.RegisterCodec(cdc)
 	faucet.RegisterCodec(cdc)

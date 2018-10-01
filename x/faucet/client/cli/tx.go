@@ -1,11 +1,12 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
@@ -28,10 +29,6 @@ func GetCmdRequestCoins(cdc *codec.Codec) *cobra.Command {
 				WithCodec(cdc).
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
-			if err := cliCtx.EnsureAccountExists(); err != nil {
-				return err
-			}
-
 			amount := viper.GetString(flagAmount)
 			coins, err := sdk.ParseCoins(amount)
 			if err != nil {
@@ -48,11 +45,13 @@ func GetCmdRequestCoins(cdc *codec.Codec) *cobra.Command {
 				Requester: account,
 			}
 
-			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
+			fmt.Println("aaa")
+			return completeAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
 	}
 
 	cmd.Flags().String(flagAmount, "", "Amount of coins to request")
+	cmd.MarkFlagRequired(flagAmount)
 
 	return cmd
 }

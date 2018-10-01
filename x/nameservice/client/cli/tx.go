@@ -5,11 +5,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	"github.com/mossid/sdk-nameservice-example/x/nameservice"
 )
@@ -25,7 +24,6 @@ func GetCmdBuyDomain(cdc *codec.Codec) *cobra.Command {
 		Use:   "buy-domain",
 		Short: "bid for existing domain or claim new domain",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
@@ -55,7 +53,15 @@ func GetCmdBuyDomain(cdc *codec.Codec) *cobra.Command {
 				Buyer:  account,
 			}
 
-			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
+			tx := auth.StdTx{
+				Msgs: []sdk.Msg{msg},
+			}
+
+			bz := cdc.MustMarshalBinary(tx)
+
+			_, err = cliCtx.BroadcastTx(bz)
+
+			return err
 		},
 	}
 

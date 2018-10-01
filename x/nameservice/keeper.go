@@ -68,5 +68,5 @@ func (k Keeper) GetPrice(ctx sdk.Context, domain string) (price sdk.Coins) {
 // SetPrice - sets the current price of a domain
 func (k Keeper) SetPrice(ctx sdk.Context, domain string, price sdk.Coins) {
 	store := ctx.KVStore(k.key)
-	store.Set([]byte(domain), k.cdc.MustMarshalBinary(price))
+	store.Set(PriceKey(domain), k.cdc.MustMarshalBinary(price))
 }
