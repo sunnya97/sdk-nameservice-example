@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -45,7 +43,6 @@ func GetCmdRequestCoins(cdc *codec.Codec) *cobra.Command {
 				Requester: account,
 			}
 
-			fmt.Println("aaa")
 			return completeAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
 	}
