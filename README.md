@@ -6,7 +6,7 @@ All of the final source code for this tutorial project is in this directory, how
 
 ## The Keeper
 
-The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interacts with the store, has references to other keepers, and often contains most of the core functionality of a module.  To begin, let's create a file called `keeper.go` and place it in a folder called `nameservice` that will hold our module.
+The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other keepers, and often contains most of the core functionality of a module.  To begin, let's create a file called `keeper.go` and place it in a folder called `nameservice` that will hold our module.
 
 ### Keeper Struct
 
@@ -96,7 +96,7 @@ We now add similar functions for Getting and Setting Owners.
         return bz != nil
     }
 ```
-Note that now, instead of accessing the the data from the `namesStoreKey` store, we now get it from the `ownersStoreKey` store.  Because sdk.AccAddress is a type alias for `[]byte`, we can be natively cast to it.  We also added an extra function `HasOwner` that tells us whether a name already has an owner or not.
+Note that now, instead of accessing the the data from the `namesStoreKey` store, we now get it from the `ownersStoreKey` store.  Because sdk.AccAddress is a type alias for `[]byte`, we can natively cast to it.  We also added an extra function `HasOwner` that tells us whether a name already has an owner or not.
 
 Finally, we will add a getter and setter for the Price of a name.
 
