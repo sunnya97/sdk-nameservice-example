@@ -1,8 +1,8 @@
 package nameservice
 
 import (
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 )
 
@@ -12,9 +12,19 @@ type Keeper struct {
 
 	namesStoreKey  sdk.StoreKey // The (unexposed) key used to access the store from the Context.
 	ownersStoreKey sdk.StoreKey // The (unexposed) key used to access the store from the Context.
-	priceStoreKey  sdk.StoreKey // The (unexposed) key used to access the store from the Context.
+	pricesStoreKey sdk.StoreKey // The (unexposed) key used to access the store from the Context.
 
-	cdc *wire.Codec // The wire codec for binary encoding/decoding.
+	cdc *codec.Codec // The wire codec for binary encoding/decoding.
+}
+
+func NewKeeper(coinKeeper bank.Keeper, namesStoreKey sdk.StoreKey, ownersStoreKey sdk.StoreKey, priceStoreKey sdk.StoreKey, cdc *codec.Codec) Keeper {
+	return Keeper{
+		coinKeeper:     coinKeeper,
+		namesStoreKey:  namesStoreKey,
+		ownersStoreKey: ownersStoreKey,
+		pricesStoreKey: priceStoreKey,
+		cdc:            cdc,
+	}
 }
 
 // GetTrend - returns the current cool trend
@@ -55,7 +65,7 @@ func (k Keeper) GetPrice(ctx sdk.Context, name string) sdk.Coins {
 	if !k.HasOwner(ctx, name) {
 		return sdk.Coins{sdk.NewInt64Coin("steak", 1)}
 	}
-	store := ctx.KVStore(k.priceStoreKey)
+	store := ctx.KVStore(k.pricesStoreKey)
 	bz := store.Get([]byte(name))
 	var price sdk.Coins
 	k.cdc.MustUnmarshalBinary(bz, &price)
@@ -64,6 +74,6 @@ func (k Keeper) GetPrice(ctx sdk.Context, name string) sdk.Coins {
 
 // SetPrice - sets the current price of a name
 func (k Keeper) SetPrice(ctx sdk.Context, name string, price sdk.Coins) {
-	store := ctx.KVStore(k.priceStoreKey)
+	store := ctx.KVStore(k.pricesStoreKey)
 	store.Set([]byte(name), k.cdc.MustMarshalBinary(price))
 }

@@ -1,12 +1,12 @@
 # Example SDK Module Tutorial
 
-In this tutorial series, we are going to build a simplistic but functional module using the Cosmos SDK and learn the basics so that you can get started building your own modules and decentralized applications.  In this tutorial we will build a "nameservice", a mapping of strings to other strings (similar to Namecoin, ENS, or Handshake), in which to buy the name, the buyer has to pay the current owner more than the current owner paid to buy it!
+In this tutorial series, we are going to build a simplistic but functional module using the (Cosmos SDK)[https://github.com/cosmos/cosmos-sdk/] and learn the basics so that you can get started building your own modules and decentralized applications.  In this tutorial we will build a "nameservice", a mapping of strings to other strings (similar to (Namecoin)[https://namecoin.org/], (ENS)[https://ens.domains/], or (Handshake)[https://handshake.org/]), in which to buy the name, the buyer has to pay the current owner more than the current owner paid to buy it!
 
 All of the final source code for this tutorial project is in this directory, however, it is highly recommended that you follow along manually and try building the project yourself!
 
 ## The Keeper
 
-The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other keepers, and often contains most of the core functionality of a module.  To begin, let's create a file called `keeper.go` and place it in a folder called `nameservice` that will hold our module.
+The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other keepers, and often contains most of the core functionality of a module.  To begin, let's create a file called `keeper.go` and place it in a folder called `./x/nameservice` that will hold our module. It is general practice to keep the modules in the `./x/` folder.
 
 ### Keeper Struct
 
@@ -28,7 +28,7 @@ type Keeper struct {
     ownersStoreKey sdk.StoreKey // The (unexposed) key used to access the store from the Context.
     priceStoreKey sdk.StoreKey // The (unexposed) key used to access the store from the Context.
 
-    cdc *wire.Codec // The wire codec for binary encoding/decoding.
+    cdc *codec.Codec // The wire codec for binary encoding/decoding.
 }
 ```
 
@@ -42,7 +42,7 @@ Next, we create the Keeper struct itself.  In this keeper there are a couple of 
     - `namesStoreKey` - This is the main store that stores the value string that the name points to (i.e. The mapping from domain name -> IP Address)
     - `ownersStoreKey` - This store contains the current owner of this name
     - `priceStoreKey` - This store contains the price that the current owner paid. And buying of this name must spend more than the current owner.
-- `*wire.Codec` - This is a pointer to the codec that is used by Amino to encode and decode binary structs.
+- `*codec.Codec` - This is a pointer to the codec that is used by Amino to encode and decode binary structs.
 
 ### Getters and Setters
 
@@ -141,6 +141,10 @@ type Msg interface {
 	// Must be alphanumeric or empty.
 	Type() string
 
+	// Returns a human-readable string for the message, intended for utilization
+	// within tags
+	Name() string
+
 	// ValidateBasic does a simple validation check that
 	// doesn't require access to any other information.
 	ValidateBasic() Error
@@ -159,16 +163,16 @@ We'll start by defining `MsgSetName` in a new file called `msgs.go` in the `name
 
 ```go
 type MsgSetName struct {
-	Name  string
-	Value string
-	Owner sdk.AccAddress
+	NameID string
+	Value  string
+	Owner  sdk.AccAddress
 }
 
 func NewMsgSetName(name string, value string, owner sdk.AccAddress) MsgSetName {
 	return MsgBuyName{
-		Name:  name,
-		Value: value,
-		Owner: owner,
+		NameID: name,
+		Value:  value,
+		Owner:  owner,
 	}
 }
 ```
@@ -177,11 +181,14 @@ The `MsgSetName` has three attributes:
 - `value` - What the name resolves to
 - `owner` - The owner of that name
 
+Note that we use the field name `NameID` rather than `Name` as `.Name()` is the name of a method on the `Msg` interface.  This will be resolved in a future update of the SDK.  https://github.com/cosmos/cosmos-sdk/issues/2456
+
 ```go
 // Implements Msg.
 func (msg MsgSetName) Type() string { return "nameservice" }
+func (msg MsgSetName) Name() string { return "set_name"}
 ```
-This is used by the SDK to route msgs to the proper module for handling.
+These is used by the SDK to route msgs to the proper module for handling and for adding human readable names to tags.
 
 ```go
 // Implements Msg.
@@ -189,7 +196,7 @@ func (msg MsgSetName) ValidateBasic() sdk.Error {
 	if msg.Owner.Empty() {
 		return sdk.ErrInvalidAddress(msg.Owner.String())
 	}
-	if len(msg.Name) == 0 || len(msg.Value) == 0 {
+	if len(msg.NameID) == 0 || len(msg.Value) == 0 {
 		return sdk.ErrUnknownRequest("Name and Value cannot be empty")
 	}
 	return nil
@@ -254,10 +261,10 @@ In the same file, we define the function `handleMsgSetName`.
 ```go
 // Handle MsgSetName
 func handleMsgSetName(ctx sdk.Context, keeper Keeper, msg MsgSetName) sdk.Result {
-	if !msg.Owner.Equals(keeper.GetOwner(ctx, msg.Name)) { // Checks if the the msg sender is the same as the current owner
+	if !msg.Owner.Equals(keeper.GetOwner(ctx, msg.NameID)) { // Checks if the the msg sender is the same as the current owner
 		return sdk.ErrUnauthorized("Incorrect Owner").Result() // If not, throw an error
 	}
-	keeper.SetName(ctx, msg.Name, msg.Value) // If so, set the name to the value specified in the msg.
+	keeper.SetName(ctx, msg.NameID, msg.Value) // If so, set the name to the value specified in the msg.
 	return sdk.Result{}                      // return
 }
 ```
@@ -273,14 +280,14 @@ We define the Msg for buying names and add it to the `msgs.go` file:
 
 ```go
 type MsgBuyName struct {
-	Name  string
+	NameID  string
 	Bid   sdk.Coins
 	Buyer sdk.AccAddress
 }
 
 func NewMsgBuyName(name string, bid sdk.Coins, buyer sdk.AccAddress) MsgBuyName {
 	return MsgBuyName{
-		Name:  name,
+		NameID:  name,
 		Bid:   bid,
 		Buyer: buyer,
 	}
@@ -288,13 +295,14 @@ func NewMsgBuyName(name string, bid sdk.Coins, buyer sdk.AccAddress) MsgBuyName 
 
 // Implements Msg.
 func (msg MsgBuyName) Type() string { return "nameservice" }
+func (msg MsgSetName) Name() string { return "buy_name"}
 
 // Implements Msg.
 func (msg MsgBuyName) ValidateBasic() sdk.Error {
 	if msg.Buyer.Empty() {
 		return sdk.ErrInvalidAddress(msg.Buyer.String())
 	}
-	if len(msg.Name) == 0 {
+	if len(msg.NameID) == 0 {
 		return sdk.ErrUnknownRequest("Name and Value cannot be empty")
 	}
 	if !msg.Bid.IsPositive() {
@@ -340,11 +348,11 @@ And we add the actual handle function to the `handler.go` file:
 ```go
 // Handle MsgBuyName
 func handleMsgBuyName(ctx sdk.Context, keeper Keeper, msg MsgBuyName) sdk.Result {
-	if keeper.GetPrice(ctx, msg.Name).IsGTE(msg.Bid) { // Checks if the the bid price is greater than the price paid by the current owner
+	if keeper.GetPrice(ctx, msg.NameID).IsGTE(msg.Bid) { // Checks if the the bid price is greater than the price paid by the current owner
 		return sdk.ErrInsufficientCoins("Bid not high enough").Result() // If not, throw an error
 	}
-	if keeper.HasOwner(ctx, msg.Name) {
-		_, err := keeper.coinKeeper.SendCoins(ctx, msg.Buyer, keeper.GetOwner(ctx, msg.Name), msg.Bid)
+	if keeper.HasOwner(ctx, msg.NameID) {
+		_, err := keeper.coinKeeper.SendCoins(ctx, msg.Buyer, keeper.GetOwner(ctx, msg.NameID), msg.Bid)
 		if err != nil {
 			return sdk.ErrInsufficientCoins("Buyer does not have enough coins").Result()
 		}
@@ -354,10 +362,691 @@ func handleMsgBuyName(ctx sdk.Context, keeper Keeper, msg MsgBuyName) sdk.Result
 			return sdk.ErrInsufficientCoins("Buyer does not have enough coins").Result()
 		}
 	}
-	keeper.SetOwner(ctx, msg.Name, msg.Buyer)
+	keeper.SetOwner(ctx, msg.NameID, msg.Buyer)
+	keeper.SetPrice(ctx, msg.NameID, msg.Bid)
 	return sdk.Result{}
 }
 ```
-In this function, we check to make sure the bid is higher than the current price.  If it is, we check to see whether the name already has an owner.  If it does, they get transferred the money from the Buyer.  If it doesn't, the money just gets burned from the buyer.  If either `SubtractCoins` or `SendCoins` returns a non-nil error, the handler throws an error, reverting the transaction.  Otherwise, we set the buyer to the new owner and return.
+In this function, we check to make sure the bid is higher than the current price.  If it is, we check to see whether the name already has an owner.  If it does, they get transferred the money from the Buyer.  If it doesn't, the money just gets burned from the buyer.  If either `SubtractCoins` or `SendCoins` returns a non-nil error, the handler throws an error, reverting the transaction.  Otherwise, we set the buyer to the new owner, set the new price to be the current bid, and return.
 
+Now that the core logic of our nameservice is finished, let's actually build an app that uses the module.  The main focus of this tutorial was the building of the core module, and the rest of the tutorial is just to get the app up and running, so the explanations will be less exhaustive from here on out. In most cases, you'll be using similar boilercode as well.
 
+## Codec File
+
+In your module's folder create a `codec.go` file.  This allows Amino to register the `MsgSetName` and `MsgBuyName`.
+
+```go
+package nameservice
+
+import (
+	"github.com/cosmos/cosmos-sdk/codec"
+)
+
+// Register concrete types on wire codec
+func RegisterCodec(cdc *codec.Codec) {
+	cdc.RegisterConcrete(MsgSetName{}, "nameservice/SetName", nil)
+	cdc.RegisterConcrete(MsgBuyName{}, "nameservice/BuyName", nil)
+}
+```
+
+## Nameservice Module CLI
+
+Next, in the module's folder, create two files:
+ - `./client/cli/query.go`
+ - `./client/cli/tx.go`
+
+These will enable our cli to understand our module.
+
+query.go
+```go
+package cli
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
+
+type QueryResult struct {
+	Value string         `json:"value"`
+	Owner sdk.AccAddress `json:"owner"`
+	Price sdk.Coins      `json:"price"`
+}
+
+// GetCmdResolveName queries information about a name
+func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "resolve [name]",
+		Short: "resolve name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(value))
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+// GetCmdWhois queries information about a domain
+func GetCmdWhois(storeKeyNames string, storeKeyOwners string, storeKeyPrices string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "whois [name]",
+		Short: "Query whois info of name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
+			if err != nil {
+				return err
+			}
+
+			owner, err := cliCtx.QueryStore([]byte(name), storeKeyOwners)
+			if err != nil {
+				return err
+			}
+
+			pricebz, err := cliCtx.QueryStore([]byte(name), storeKeyPrices)
+			if err != nil {
+				return err
+			}
+			var price sdk.Coins
+			cdc.MustUnmarshalBinary(pricebz, &price)
+
+			result := QueryResult{
+				Value: string(value),
+				Owner: owner,
+				Price: price,
+			}
+
+			output, err := codec.MarshalJSONIndent(cdc, result)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(output))
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+```
+
+tx.go
+```go
+package cli
+
+import (
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+
+	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
+)
+
+const (
+	flagName   = "name"
+	flagValue  = "value"
+	flagAmount = "amount"
+)
+
+func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "buy-name",
+		Short: "bid for existing name or claim new name",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			if err := cliCtx.EnsureAccountExists(); err != nil {
+				return err
+			}
+
+			name := viper.GetString(flagName)
+
+			amount := viper.GetString(flagAmount)
+			coins, err := sdk.ParseCoins(amount)
+			if err != nil {
+				return err
+			}
+
+			account, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			msg := nameservice.MsgBuyName{
+				NameID: name,
+				Bid:    coins,
+				Buyer:  account,
+			}
+
+			tx := auth.StdTx{
+				Msgs: []sdk.Msg{msg},
+			}
+
+			bz := cdc.MustMarshalBinary(tx)
+
+			_, err = cliCtx.BroadcastTx(bz)
+
+			return err
+		},
+	}
+
+	cmd.Flags().String(flagName, "", "Name to claim")
+	cmd.Flags().String(flagAmount, "", "Coins willing to pay for the name")
+
+	return cmd
+}
+
+func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-name",
+		Short: "set the value associated with a name that you own",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			if err := cliCtx.EnsureAccountExists(); err != nil {
+				return err
+			}
+
+			name := viper.GetString(flagName)
+			value := viper.GetString(flagValue)
+
+			account, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			msg := nameservice.MsgSetName{
+				NameID: name,
+				Value:  value,
+				Owner:  account,
+			}
+
+			tx := auth.StdTx{
+				Msgs: []sdk.Msg{msg},
+			}
+
+			bz := cdc.MustMarshalBinary(tx)
+
+			_, err = cliCtx.BroadcastTx(bz)
+
+			return err
+		},
+	}
+
+	cmd.Flags().String(flagName, "", "Name to claim")
+	cmd.Flags().String(flagValue, "", "Value to associate with the name")
+
+	return cmd
+}
+```
+
+## App.go
+
+Next, in the root of our project directory, let's create a new file called `app.go`.  At the top of the file, let's declare the package and import our dependencies.
+
+```go
+package app
+
+import (
+	"os"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+
+	bam "github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	faucet "github.com/sunnya97/sdk-faucet-module"
+	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
+)
+```
+
+Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the four modules we will use in our app: `auth`, `bank`, `faucet` and `nameservice`.
+
+Next we'll declare the name and struct for our app.  In this example, we'll call it Nameshake, a portmanteau of Handshake and Namecoin.
+
+```go
+const (
+	appName = "Nameshake"
+)
+
+type NameshakeApp struct {
+	*bam.BaseApp
+	cdc *codec.Codec
+
+	keyMain     *sdk.KVStoreKey
+	keyAccount  *sdk.KVStoreKey
+	keyNSnames  *sdk.KVStoreKey
+	keyNSowners *sdk.KVStoreKey
+	keyNSprices *sdk.KVStoreKey
+
+	accountMapper auth.AccountMapper
+	bankKeeper    bank.Keeper
+	nsKeeper      nameservice.Keeper
+}
+```
+
+Now we will create a constructor for a new HandshakeApp.  In this, we will generate all storeKeys and Keepers.  We will register the routes, mount the stores, and set the initChainer (explained next).
+
+```go
+func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
+	cdc := MakeCodec()
+	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc))
+
+	var app = &NameshakeApp{
+		BaseApp: bApp,
+		cdc:     cdc,
+
+		keyMain:     sdk.NewKVStoreKey("main"),
+		keyAccount:  sdk.NewKVStoreKey("acc"),
+		keyNSnames:  sdk.NewKVStoreKey("ns_names"),
+		keyNSowners: sdk.NewKVStoreKey("ns_owners"),
+		keyNSprices: sdk.NewKVStoreKey("ns_prices"),
+	}
+
+	app.accountMapper = auth.NewAccountMapper(
+		app.cdc,
+		app.keyAccount,
+		auth.ProtoBaseAccount,
+	)
+
+	app.bankKeeper = bank.NewBaseKeeper(app.accountMapper)
+
+	app.nsKeeper = nameservice.NewKeeper(
+		app.bankKeeper,
+		app.keyNSnames,
+		app.keyNSowners,
+		app.keyNSprices,
+		app.cdc,
+	)
+
+	app.Router().
+		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
+		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
+
+	app.SetInitChainer(app.initChainer)
+
+	app.MountStoresIAVL(
+		app.keyMain,
+		app.keyAccount,
+		app.keyNSnames,
+		app.keyNSowners,
+		app.keyNSprices,
+	)
+
+	err := app.LoadLatestVersion(app.keyMain)
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
+
+	return app
+}
+```
+
+Next, we'll add an initChainer function so we can generate accounts with initial balance from the `genesis.json`.
+
+```go
+type GenesisState struct {
+	Accounts []auth.BaseAccount
+}
+
+func (app *NameshakeApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	stateJSON := req.AppStateBytes
+
+	genesisState := new(GenesisState)
+	err := app.cdc.UnmarshalJSON(stateJSON, genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, acc := range genesisState.Accounts {
+		acc.AccountNumber = app.accountMapper.GetNextAccountNumber(ctx)
+		app.accountMapper.SetAccount(ctx, &acc)
+	}
+
+	return abci.ResponseInitChain{}
+}
+```
+
+And finally, a helper function to generate an amino codec.
+
+```go
+func MakeCodec() *codec.Codec {
+	var cdc = codec.New()
+	auth.RegisterCodec(cdc)
+	bank.RegisterCodec(cdc)
+	nameservice.RegisterCodec(cdc)
+	faucet.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc)
+	codec.RegisterCrypto(cdc)
+	return cdc
+}
+```
+
+## Nameshaked and Nameshakecli
+
+Next, we'll create two files in the root of the project directory that will instantiate the two main pieces of software, the blockchain node and the CLI for interacting with the chain.
+- `./cmd/nameshaked/main.go`
+- `./cmd/nameshakecli/main.go`
+
+nameshaked/main.go
+```go
+package main
+
+import (
+	"encoding/json"
+	"io"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/cli"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/cosmos/cosmos-sdk/server"
+
+	app "github.com/sunnya97/sdk-nameservice-example"
+)
+
+var DefaultNodeHome = os.ExpandEnv("$HOME/.nameshaked")
+
+var appInit = server.AppInit{
+	AppGenState: server.SimpleAppGenState,
+	AppGenTx:    server.SimpleAppGenTx,
+}
+
+func main() {
+	cdc := app.MakeCodec()
+	ctx := server.NewDefaultContext()
+	cobra.EnableCommandSorting = false
+	rootCmd := &cobra.Command{
+		Use:               "nameshaked",
+		Short:             "Nameshake App Daemon (server)",
+		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
+	}
+
+	server.AddCommands(ctx, cdc, rootCmd, appInit,
+		server.ConstructAppCreator(newApp, "nameshake"),
+		server.ConstructAppExporter(exportAppStateAndTMValidators, "nameshake"))
+
+	// prepare and add flags
+	executor := cli.PrepareBaseCmd(rootCmd, "NS", DefaultNodeHome)
+	err := executor.Execute()
+	if err != nil {
+		// handle with #870
+		panic(err)
+	}
+}
+
+func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application {
+	return app.NewNameshakeApp(logger, db)
+}
+
+func exportAppStateAndTMValidators(
+	logger log.Logger, db dbm.DB, traceStore io.Writer,
+) (json.RawMessage, []tmtypes.GenesisValidator, error) {
+	return nil, nil, nil
+}
+```
+
+nameshakecli/main.go
+```go
+package main
+
+import (
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/client/rpc"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+
+	app "github.com/sunnya97/sdk-nameservice-example"
+
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	faucetcmd "github.com/sunnya97/sdk-faucet-module/client/cli"
+	nameservicecmd "github.com/sunnya97/sdk-nameservice-example/x/nameservice/client/cli"
+)
+
+const storeAcc = "acc"
+const storeNSnames = "ns_names"
+const storeNSowners = "ns_owners"
+const storeNSprices = "ns_prices"
+
+var (
+	rootCmd = &cobra.Command{
+		Use:   "nameshakecli",
+		Short: "Nameshake Client",
+	}
+	DefaultCLIHome = os.ExpandEnv("$HOME/.nameshakecli")
+)
+
+func main() {
+	cobra.EnableCommandSorting = false
+	cdc := app.MakeCodec()
+
+	rootCmd.AddCommand(client.ConfigCmd())
+	rpc.AddCommands(rootCmd)
+
+	queryCmd := &cobra.Command{
+		Use:     "query",
+		Aliases: []string{"q"},
+		Short:   "Querying subcommands",
+	}
+
+	queryCmd.AddCommand(
+		rpc.BlockCommand(),
+		rpc.ValidatorCommand(),
+	)
+	tx.AddCommands(queryCmd, cdc)
+	queryCmd.AddCommand(client.LineBreak)
+	queryCmd.AddCommand(client.GetCommands(
+		authcmd.GetAccountCmd(storeAcc, cdc, authcmd.GetAccountDecoder(cdc)),
+		nameservicecmd.GetCmdResolveName(storeNSnames, cdc),
+		nameservicecmd.GetCmdWhois(storeNSnames, storeNSowners, storeNSprices, cdc),
+	)...)
+
+	txCmd := &cobra.Command{
+		Use:   "tx",
+		Short: "Transactions subcommands",
+	}
+
+	txCmd.AddCommand(client.PostCommands(
+		nameservicecmd.GetCmdBuyName(cdc),
+		nameservicecmd.GetCmdSetName(cdc),
+		faucetcmd.GetCmdRequestCoins(cdc),
+	)...)
+
+	rootCmd.AddCommand(
+		queryCmd,
+		txCmd,
+		client.LineBreak,
+	)
+
+	rootCmd.AddCommand(
+		keys.Commands(),
+	)
+
+	executor := cli.PrepareMainCmd(rootCmd, "NS", DefaultCLIHome)
+	err := executor.Execute()
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## Dependencies
+
+Finally add the following files to the root directory.
+
+Gopkg.toml
+```
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+[[constraint]]
+  name = "github.com/cosmos/cosmos-sdk"
+  branch = "develop"
+
+[[override]]
+  name = "github.com/golang/protobuf"
+  version = "=1.1.0"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "~0.0.1"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "~1.0.0"
+
+[[override]]
+  name = "github.com/tendermint/go-amino"
+  version = "=v0.12.0"
+
+[[override]]
+  name = "github.com/tendermint/iavl"
+  version = "=v0.11.0"
+
+[[override]]
+  name = "github.com/tendermint/tendermint"
+  version = "=0.25.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+```
+
+Makefile
+```
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+[[constraint]]
+  name = "github.com/cosmos/cosmos-sdk"
+  branch = "develop"
+
+[[override]]
+  name = "github.com/golang/protobuf"
+  version = "=1.1.0"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "~0.0.1"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "~1.0.0"
+
+[[override]]
+  name = "github.com/tendermint/go-amino"
+  version = "=v0.12.0"
+
+[[override]]
+  name = "github.com/tendermint/iavl"
+  version = "=v0.11.0"
+
+[[override]]
+  name = "github.com/tendermint/tendermint"
+  version = "=0.25.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+```
+
+## Installing the software
+
+Start by installing Dep.
+
+```
+go get -v github.com/golang/dep/cmd/dep
+```
+
+Next, run
+
+```
+dep ensure
+```
+
+Finally run
+
+```
+make install
+```
