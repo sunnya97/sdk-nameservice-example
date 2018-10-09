@@ -4,6 +4,8 @@ In this tutorial series, we are going to build a simplistic but functional modul
 
 All of the final source code for this tutorial project is in this directory, however, it is highly recommended that you follow along manually and try building the project yourself!
 
+Docker image is available in `mossid/sdk-example:0.2`.
+
 ## The Keeper
 
 The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other keepers, and often contains most of the core functionality of a module.  To begin, let's create a file called `keeper.go` and place it in a folder called `nameservice` that will hold our module.
