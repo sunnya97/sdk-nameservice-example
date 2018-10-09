@@ -104,7 +104,7 @@ Finally, we will add a getter and setter for the Price of a name.
     // GetPrice - gets the current price of a name.  If price doesn't exist yet, set to 1steak.
     func (k Keeper) GetPrice(ctx sdk.Context, name string) sdk.Coins {
         if !k.HasOwner(ctx, name) {
-            return sdk.Coins{sdk.NewInt64Coin("steak", 1)}
+            return sdk.Coins{sdk.NewInt64Coin("mycoin", 1)}
         }
         store := ctx.KVStore(k.priceStoreKey)
         bz := store.Get([]byte(name))
@@ -720,7 +720,7 @@ Next, we'll add an initChainer function so we can generate accounts with initial
 
 ```go
 type GenesisState struct {
-	Accounts []auth.BaseAccount
+	Accounts []auth.BaseAccount `json:"accounts"`
 }
 
 func (app *NameshakeApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {

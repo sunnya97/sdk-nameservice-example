@@ -28,7 +28,8 @@ func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
 
 			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
 			if err != nil {
-				return err
+				fmt.Printf("could not resolve name - %s \n", string(name))
+				return nil
 			}
 
 			fmt.Println(string(value))
@@ -65,7 +66,11 @@ func GetCmdWhois(storeKeyNames string, storeKeyOwners string, storeKeyPrices str
 				return err
 			}
 			var price sdk.Coins
-			cdc.MustUnmarshalBinary(pricebz, &price)
+			err = cdc.UnmarshalBinary(pricebz, &price)
+			if err != nil {
+				fmt.Printf("could not resolve whois - %s \n", string(name))
+				return nil
+			}
 
 			result := QueryResult{
 				Value: string(value),
