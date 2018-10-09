@@ -1,8 +1,6 @@
 package app
 
 import (
-	"fmt"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -72,6 +70,9 @@ func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
 		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
 		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
 
+	app.QueryRouter().
+		AddRoute("nameservice", nameservice.NewQuerier(app.nsKeeper))
+
 	app.SetInitChainer(app.initChainer)
 
 	app.MountStoresIAVL(
@@ -96,20 +97,15 @@ type GenesisState struct {
 
 func (app *NameshakeApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	stateJSON := req.AppStateBytes
-	fmt.Println("2222222222222222")
 
 	genesisState := new(GenesisState)
 	err := app.cdc.UnmarshalJSON(stateJSON, genesisState)
-	fmt.Println("coffee")
-
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("bagel")
 
 	for _, acc := range genesisState.Accounts {
 		acc.AccountNumber = app.accountMapper.GetNextAccountNumber(ctx)
-		fmt.Println("1111111111111111111111")
 		app.accountMapper.SetAccount(ctx, &acc)
 	}
 

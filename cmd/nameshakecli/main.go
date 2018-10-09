@@ -53,8 +53,8 @@ func main() {
 	queryCmd.AddCommand(client.LineBreak)
 	queryCmd.AddCommand(client.GetCommands(
 		authcmd.GetAccountCmd(storeAcc, cdc, authcmd.GetAccountDecoder(cdc)),
-		nameservicecmd.GetCmdResolveName(storeNSnames, cdc),
-		nameservicecmd.GetCmdWhois(storeNSnames, storeNSowners, storeNSprices, cdc),
+		nameservicecmd.GetCmdResolveName("nameservice", cdc),
+		nameservicecmd.GetCmdWhois("nameservice", cdc),
 	)...)
 
 	txCmd := &cobra.Command{

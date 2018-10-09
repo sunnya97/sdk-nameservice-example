@@ -371,6 +371,76 @@ In this function, we check to make sure the bid is higher than the current price
 
 Now that the core logic of our nameservice is finished, let's actually build an app that uses the module.  The main focus of this tutorial was the building of the core module, and the rest of the tutorial is just to get the app up and running, so the explanations will be less exhaustive from here on out. In most cases, you'll be using similar boilercode as well.
 
+## Querier
+
+In your module's folder create a `querier.go` file.  This file allows for advanced queries into the application state.
+
+```go
+package nameservice
+
+import (
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+)
+
+// query endpoints supported by the governance Querier
+const (
+	QueryResolve = "resolve"
+	QueryWhois   = "whois"
+)
+
+func NewQuerier(keeper Keeper) sdk.Querier {
+	return func(ctx sdk.Context, path []string, req abci.RequestQuery) (res []byte, err sdk.Error) {
+		switch path[0] {
+		case QueryResolve:
+			return queryResolve(ctx, path[1:], req, keeper)
+		case QueryWhois:
+			return queryWhois(ctx, path[1:], req, keeper)
+		default:
+			return nil, sdk.ErrUnknownRequest("unknown nameservice query endpoint")
+		}
+	}
+}
+
+// nolint: unparam
+func queryResolve(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
+	name := path[0]
+
+	value := keeper.ResolveName(ctx, name)
+
+	if value == "" {
+		return []byte{}, sdk.ErrUnknownRequest("could not resolve name")
+	}
+
+	return []byte(value), nil
+}
+
+type Whois struct {
+	Value string         `json:"value"`
+	Owner sdk.AccAddress `json:"owner"`
+	Price sdk.Coins      `json:"price"`
+}
+
+// nolint: unparam
+func queryWhois(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
+	name := path[0]
+
+	whois := Whois{}
+
+	whois.Value = keeper.ResolveName(ctx, name)
+	whois.Owner = keeper.GetOwner(ctx, name)
+	whois.Price = keeper.GetPrice(ctx, name)
+
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, whois)
+	if err2 != nil {
+		panic("could not marshal result to JSON")
+	}
+
+	return bz, nil
+}
+```
+
 ## Codec File
 
 In your module's folder create a `codec.go` file.  This allows Amino to register the `MsgSetName` and `MsgBuyName`.
@@ -418,7 +488,7 @@ type QueryResult struct {
 }
 
 // GetCmdResolveName queries information about a name
-func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
+func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resolve [name]",
 		Short: "resolve name",
@@ -427,12 +497,13 @@ func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
 			name := args[0]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/proposals/%s", queryRoute, name), nil)
 			if err != nil {
-				return err
+				fmt.Printf("could not resolve name - %s \n", string(name))
+				return nil
 			}
 
-			fmt.Println(string(value))
+			fmt.Println(string(res))
 
 			return nil
 		},
@@ -442,7 +513,7 @@ func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
 }
 
 // GetCmdWhois queries information about a domain
-func GetCmdWhois(storeKeyNames string, storeKeyOwners string, storeKeyPrices string, cdc *codec.Codec) *cobra.Command {
+func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "whois [name]",
 		Short: "Query whois info of name",
@@ -451,35 +522,13 @@ func GetCmdWhois(storeKeyNames string, storeKeyOwners string, storeKeyPrices str
 			name := args[0]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/whois/%s", queryRoute, name), nil)
 			if err != nil {
-				return err
+				fmt.Printf("could not resolve whois - %s \n", string(name))
+				return nil
 			}
 
-			owner, err := cliCtx.QueryStore([]byte(name), storeKeyOwners)
-			if err != nil {
-				return err
-			}
-
-			pricebz, err := cliCtx.QueryStore([]byte(name), storeKeyPrices)
-			if err != nil {
-				return err
-			}
-			var price sdk.Coins
-			cdc.MustUnmarshalBinary(pricebz, &price)
-
-			result := QueryResult{
-				Value: string(value),
-				Owner: owner,
-				Price: price,
-			}
-
-			output, err := codec.MarshalJSONIndent(cdc, result)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(string(output))
+			fmt.Println(string(res))
 
 			return nil
 		},
@@ -495,7 +544,6 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -514,8 +562,9 @@ const (
 
 func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "buy-name",
+		Use:   "buy-name [name] [amount]",
 		Short: "bid for existing name or claim new name",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
@@ -525,9 +574,9 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			name := viper.GetString(flagName)
+			name := args[0]
 
-			amount := viper.GetString(flagAmount)
+			amount := args[1]
 			coins, err := sdk.ParseCoins(amount)
 			if err != nil {
 				return err
@@ -556,16 +605,14 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagName, "", "Name to claim")
-	cmd.Flags().String(flagAmount, "", "Coins willing to pay for the name")
-
 	return cmd
 }
 
 func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set-name",
+		Use:   "set-name [name] [value]",
 		Short: "set the value associated with a name that you own",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
@@ -575,8 +622,8 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			name := viper.GetString(flagName)
-			value := viper.GetString(flagValue)
+			name := args[0]
+			value := args[1]
 
 			account, err := cliCtx.GetFromAddress()
 			if err != nil {
@@ -601,11 +648,9 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagName, "", "Name to claim")
-	cmd.Flags().String(flagValue, "", "Value to associate with the name")
-
 	return cmd
 }
+
 ```
 
 ## App.go
@@ -696,6 +741,9 @@ func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
 	app.Router().
 		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
 		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
+
+	app.QueryRouter().
+		AddRoute("nameservice", nameservice.NewQuerier(app.nsKeeper))
 
 	app.SetInitChainer(app.initChainer)
 
@@ -827,91 +875,72 @@ func exportAppStateAndTMValidators(
 
 nameshakecli/main.go
 ```go
-package main
+package cli
 
 import (
-	"os"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
-	"github.com/tendermint/tendermint/libs/cli"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
-	"github.com/cosmos/cosmos-sdk/client/tx"
-
-	app "github.com/sunnya97/sdk-nameservice-example"
-
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	faucetcmd "github.com/sunnya97/sdk-faucet-module/client/cli"
-	nameservicecmd "github.com/sunnya97/sdk-nameservice-example/x/nameservice/client/cli"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-const storeAcc = "acc"
-const storeNSnames = "ns_names"
-const storeNSowners = "ns_owners"
-const storeNSprices = "ns_prices"
+type QueryResult struct {
+	Value string         `json:"value"`
+	Owner sdk.AccAddress `json:"owner"`
+	Price sdk.Coins      `json:"price"`
+}
 
-var (
-	rootCmd = &cobra.Command{
-		Use:   "nameshakecli",
-		Short: "Nameshake Client",
-	}
-	DefaultCLIHome = os.ExpandEnv("$HOME/.nameshakecli")
-)
+// GetCmdResolveName queries information about a name
+func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "resolve [name]",
+		Short: "resolve name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-func main() {
-	cobra.EnableCommandSorting = false
-	cdc := app.MakeCodec()
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/proposals/%s", queryRoute, name), nil)
+			if err != nil {
+				fmt.Printf("could not resolve name - %s \n", string(name))
+				return nil
+			}
 
-	rootCmd.AddCommand(client.ConfigCmd())
-	rpc.AddCommands(rootCmd)
+			fmt.Println(string(res))
 
-	queryCmd := &cobra.Command{
-		Use:     "query",
-		Aliases: []string{"q"},
-		Short:   "Querying subcommands",
-	}
-
-	queryCmd.AddCommand(
-		rpc.BlockCommand(),
-		rpc.ValidatorCommand(),
-	)
-	tx.AddCommands(queryCmd, cdc)
-	queryCmd.AddCommand(client.LineBreak)
-	queryCmd.AddCommand(client.GetCommands(
-		authcmd.GetAccountCmd(storeAcc, cdc, authcmd.GetAccountDecoder(cdc)),
-		nameservicecmd.GetCmdResolveName(storeNSnames, cdc),
-		nameservicecmd.GetCmdWhois(storeNSnames, storeNSowners, storeNSprices, cdc),
-	)...)
-
-	txCmd := &cobra.Command{
-		Use:   "tx",
-		Short: "Transactions subcommands",
+			return nil
+		},
 	}
 
-	txCmd.AddCommand(client.PostCommands(
-		nameservicecmd.GetCmdBuyName(cdc),
-		nameservicecmd.GetCmdSetName(cdc),
-		faucetcmd.GetCmdRequestCoins(cdc),
-	)...)
+	return cmd
+}
 
-	rootCmd.AddCommand(
-		queryCmd,
-		txCmd,
-		client.LineBreak,
-	)
+// GetCmdWhois queries information about a domain
+func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "whois [name]",
+		Short: "Query whois info of name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-	rootCmd.AddCommand(
-		keys.Commands(),
-	)
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/whois/%s", queryRoute, name), nil)
+			if err != nil {
+				fmt.Printf("could not resolve whois - %s \n", string(name))
+				return nil
+			}
 
-	executor := cli.PrepareMainCmd(rootCmd, "NS", DefaultCLIHome)
-	err := executor.Execute()
-	if err != nil {
-		panic(err)
+			fmt.Println(string(res))
+
+			return nil
+		},
 	}
+
+	return cmd
 }
 ```
 

@@ -17,7 +17,7 @@ type QueryResult struct {
 }
 
 // GetCmdResolveName queries information about a name
-func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
+func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resolve [name]",
 		Short: "resolve name",
@@ -26,13 +26,13 @@ func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
 			name := args[0]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/proposals/%s", queryRoute, name), nil)
 			if err != nil {
 				fmt.Printf("could not resolve name - %s \n", string(name))
 				return nil
 			}
 
-			fmt.Println(string(value))
+			fmt.Println(string(res))
 
 			return nil
 		},
@@ -42,7 +42,7 @@ func GetCmdResolveName(storeKeyNames string, cdc *codec.Codec) *cobra.Command {
 }
 
 // GetCmdWhois queries information about a domain
-func GetCmdWhois(storeKeyNames string, storeKeyOwners string, storeKeyPrices string, cdc *codec.Codec) *cobra.Command {
+func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "whois [name]",
 		Short: "Query whois info of name",
@@ -51,39 +51,13 @@ func GetCmdWhois(storeKeyNames string, storeKeyOwners string, storeKeyPrices str
 			name := args[0]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			value, err := cliCtx.QueryStore([]byte(name), storeKeyNames)
-			if err != nil {
-				return err
-			}
-
-			owner, err := cliCtx.QueryStore([]byte(name), storeKeyOwners)
-			if err != nil {
-				return err
-			}
-
-			pricebz, err := cliCtx.QueryStore([]byte(name), storeKeyPrices)
-			if err != nil {
-				return err
-			}
-			var price sdk.Coins
-			err = cdc.UnmarshalBinary(pricebz, &price)
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/whois/%s", queryRoute, name), nil)
 			if err != nil {
 				fmt.Printf("could not resolve whois - %s \n", string(name))
 				return nil
 			}
 
-			result := QueryResult{
-				Value: string(value),
-				Owner: owner,
-				Price: price,
-			}
-
-			output, err := codec.MarshalJSONIndent(cdc, result)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(string(output))
+			fmt.Println(string(res))
 
 			return nil
 		},

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -21,8 +20,9 @@ const (
 
 func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "buy-name",
+		Use:   "buy-name [name] [amount]",
 		Short: "bid for existing name or claim new name",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
@@ -32,9 +32,9 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			name := viper.GetString(flagName)
+			name := args[0]
 
-			amount := viper.GetString(flagAmount)
+			amount := args[1]
 			coins, err := sdk.ParseCoins(amount)
 			if err != nil {
 				return err
@@ -63,16 +63,14 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagName, "", "Name to claim")
-	cmd.Flags().String(flagAmount, "", "Coins willing to pay for the name")
-
 	return cmd
 }
 
 func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set-name",
+		Use:   "set-name [name] [value]",
 		Short: "set the value associated with a name that you own",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
@@ -82,8 +80,8 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			name := viper.GetString(flagName)
-			value := viper.GetString(flagValue)
+			name := args[0]
+			value := args[1]
 
 			account, err := cliCtx.GetFromAddress()
 			if err != nil {
@@ -107,9 +105,6 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 			return err
 		},
 	}
-
-	cmd.Flags().String(flagName, "", "Name to claim")
-	cmd.Flags().String(flagValue, "", "Value to associate with the name")
 
 	return cmd
 }
