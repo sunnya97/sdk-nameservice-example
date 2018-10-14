@@ -1,6 +1,6 @@
 # Example SDK Module Tutorial
 
-In this tutorial series, we are going to build a simplistic but functional module using the (Cosmos SDK)[https://github.com/cosmos/cosmos-sdk/] and learn the basics so that you can get started building your own modules and decentralized applications.  In this tutorial we will build a "nameservice", a mapping of strings to other strings (similar to (Namecoin)[https://namecoin.org/], (ENS)[https://ens.domains/], or (Handshake)[https://handshake.org/]), in which to buy the name, the buyer has to pay the current owner more than the current owner paid to buy it!
+In this tutorial series, we are going to build a simplistic but functional module using the [Cosmos SDK](https://github.com/cosmos/cosmos-sdk/) and learn the basics so that you can get started building your own modules and decentralized applications.  In this tutorial we will build a "nameservice", a mapping of strings to other strings (similar to [Namecoin](https://namecoin.org/), [ENS](https://ens.domains/), or [Handshake](https://handshake.org/)), in which to buy the name, the buyer has to pay the current owner more than the current owner paid to buy it!
 
 All of the final source code for this tutorial project is in this directory, however, it is highly recommended that you follow along manually and try building the project yourself!
 
