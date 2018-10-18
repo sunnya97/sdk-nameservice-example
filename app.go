@@ -11,8 +11,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-
-	faucet "github.com/sunnya97/sdk-faucet-module"
 	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
 )
 
@@ -68,7 +66,7 @@ func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
 
 	app.Router().
 		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
-		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
+		AddRoute("bank", bank.NewHandler(app.bankKeeper))
 
 	app.QueryRouter().
 		AddRoute("nameservice", nameservice.NewQuerier(app.nsKeeper))
@@ -117,7 +115,6 @@ func MakeCodec() *codec.Codec {
 	auth.RegisterCodec(cdc)
 	bank.RegisterCodec(cdc)
 	nameservice.RegisterCodec(cdc)
-	faucet.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	return cdc

@@ -15,7 +15,6 @@ import (
 	app "github.com/sunnya97/sdk-nameservice-example"
 
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	faucetcmd "github.com/sunnya97/sdk-faucet-module/client/cli"
 	nameservicecmd "github.com/sunnya97/sdk-nameservice-example/x/nameservice/client/cli"
 )
 
@@ -65,7 +64,6 @@ func main() {
 	txCmd.AddCommand(client.PostCommands(
 		nameservicecmd.GetCmdBuyName(cdc),
 		nameservicecmd.GetCmdSetName(cdc),
-		faucetcmd.GetCmdRequestCoins(cdc),
 	)...)
 
 	rootCmd.AddCommand(

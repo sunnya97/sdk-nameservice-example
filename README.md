@@ -497,7 +497,7 @@ func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			name := args[0]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/proposals/%s", queryRoute, name), nil)
+			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/whois/%s", queryRoute, name), nil)
 			if err != nil {
 				fmt.Printf("could not resolve name - %s \n", string(name))
 				return nil
@@ -650,7 +650,6 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 
 	return cmd
 }
-
 ```
 
 ## App.go
@@ -674,12 +673,11 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	faucet "github.com/sunnya97/sdk-faucet-module"
 	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
 )
 ```
 
-Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the four modules we will use in our app: `auth`, `bank`, `faucet` and `nameservice`.
+Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the three modules we will use in our app: `auth`, `bank`, and `nameservice`.
 
 Next we'll declare the name and struct for our app.  In this example, we'll call it Nameshake, a portmanteau of Handshake and Namecoin.
 
@@ -740,7 +738,6 @@ func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
 
 	app.Router().
 		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
-		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
 
 	app.QueryRouter().
 		AddRoute("nameservice", nameservice.NewQuerier(app.nsKeeper))
@@ -797,7 +794,6 @@ func MakeCodec() *codec.Codec {
 	auth.RegisterCodec(cdc)
 	bank.RegisterCodec(cdc)
 	nameservice.RegisterCodec(cdc)
-	faucet.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	return cdc
@@ -875,72 +871,89 @@ func exportAppStateAndTMValidators(
 
 nameshakecli/main.go
 ```go
-package cli
+package main
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/client/rpc"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+
+	app "github.com/sunnya97/sdk-nameservice-example"
+
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	nameservicecmd "github.com/sunnya97/sdk-nameservice-example/x/nameservice/client/cli"
 )
 
-type QueryResult struct {
-	Value string         `json:"value"`
-	Owner sdk.AccAddress `json:"owner"`
-	Price sdk.Coins      `json:"price"`
-}
+const storeAcc = "acc"
+const storeNSnames = "ns_names"
+const storeNSowners = "ns_owners"
+const storeNSprices = "ns_prices"
 
-// GetCmdResolveName queries information about a name
-func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "resolve [name]",
-		Short: "resolve name",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+var (
+	rootCmd = &cobra.Command{
+		Use:   "nameshakecli",
+		Short: "Nameshake Client",
+	}
+	DefaultCLIHome = os.ExpandEnv("$HOME/.nameshakecli")
+)
 
-			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/proposals/%s", queryRoute, name), nil)
-			if err != nil {
-				fmt.Printf("could not resolve name - %s \n", string(name))
-				return nil
-			}
+func main() {
+	cobra.EnableCommandSorting = false
+	cdc := app.MakeCodec()
 
-			fmt.Println(string(res))
+	rootCmd.AddCommand(client.ConfigCmd())
+	rpc.AddCommands(rootCmd)
 
-			return nil
-		},
+	queryCmd := &cobra.Command{
+		Use:     "query",
+		Aliases: []string{"q"},
+		Short:   "Querying subcommands",
 	}
 
-	return cmd
-}
+	queryCmd.AddCommand(
+		rpc.BlockCommand(),
+		rpc.ValidatorCommand(),
+	)
+	tx.AddCommands(queryCmd, cdc)
+	queryCmd.AddCommand(client.LineBreak)
+	queryCmd.AddCommand(client.GetCommands(
+		authcmd.GetAccountCmd(storeAcc, cdc, authcmd.GetAccountDecoder(cdc)),
+		nameservicecmd.GetCmdResolveName("nameservice", cdc),
+		nameservicecmd.GetCmdWhois("nameservice", cdc),
+	)...)
 
-// GetCmdWhois queries information about a domain
-func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "whois [name]",
-		Short: "Query whois info of name",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/whois/%s", queryRoute, name), nil)
-			if err != nil {
-				fmt.Printf("could not resolve whois - %s \n", string(name))
-				return nil
-			}
-
-			fmt.Println(string(res))
-
-			return nil
-		},
+	txCmd := &cobra.Command{
+		Use:   "tx",
+		Short: "Transactions subcommands",
 	}
 
-	return cmd
+	txCmd.AddCommand(client.PostCommands(
+		nameservicecmd.GetCmdBuyName(cdc),
+		nameservicecmd.GetCmdSetName(cdc),
+	)...)
+
+	rootCmd.AddCommand(
+		queryCmd,
+		txCmd,
+		client.LineBreak,
+	)
+
+	rootCmd.AddCommand(
+		keys.Commands(),
+	)
+
+	executor := cli.PrepareMainCmd(rootCmd, "NS", DefaultCLIHome)
+	err := executor.Execute()
+	if err != nil {
+		panic(err)
+	}
 }
 ```
 
