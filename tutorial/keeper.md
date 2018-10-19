@@ -57,6 +57,8 @@ func (k Keeper) SetName(ctx sdk.Context, name string, value string) {
 
 In this method on the Keeper, first get the store object for the `map[name]value` using the the `namesStoreKey` from the Keeper.
 
+> _*NOTE*_: This function uses the [`sdk.Context`](https://godoc.org/github.com/cosmos/cosmos-sdk/types#Context). This object holds functions to access a number of import pieces of state like `blockHeight` and `chainID`. See the godoc for more information on the methods it exposes.
+
 Next, insert the `<name, value>` pair into the store using its `.Set([]byte, []byte)` method.  As the store only takes `[]byte`, first cast the `string`s to `[]byte` and the use them as parameters into the `Set` method.
 
 Next, add a method to resolve the names (i.e. look up the value for the name):
@@ -125,9 +127,9 @@ func (k Keeper) SetPrice(ctx sdk.Context, name string, price sdk.Coins) {
 
 Notes on the above code:
 - `sdk.Coins` does not have a native `[]byte` encoding. To marshal and unmarshal, use [Amino](https://github.com/tendermint/go-amino/) through the codec.
-- When getting the price for a name that has no owner (and thus no price), we will return 1steak as the price.
+- When getting the price for a name that has no owner (and thus no price), return 1steak as the price.
 
-The last piece of code we need in the `./x/nameservice/keeper.go` file is a constructor function for `Keeper`:
+The last piece of code needed in the `./x/nameservice/keeper.go` file is a constructor function for `Keeper`:
 
 ```go
 // NewKeeper creates new instances of the nameservice Keeper
@@ -142,4 +144,4 @@ func NewKeeper(coinKeeper bank.Keeper, namesStoreKey sdk.StoreKey, ownersStoreKe
 }
 ```
 
-### Next its time to move onto describing how users interact with your new store using [`Msgs` and `Handlers`](./tutorial/msgs-handlers.md)
+### Next its time to move onto describing how users interact with your new store using [`Msgs` and `Handlers`](./msgs-handlers.md)

@@ -2,7 +2,7 @@
 
 Now that you have the `Keeper` setup, it's time to built the `Msgs` and `Handlers` that actually allow users to buy and set names:
 
-### `Msgs`
+## `Msgs`
 
 Represent state transitions that clients are submitting to the network. You can think of `Msgs` as similar to `Txns` in other blockchain systems. In the CosmosSDK `Msgs` must satisfy the below interface:
 
@@ -31,13 +31,15 @@ type Msg interface {
 }
 ```
 
-### `Handlers`
+## `Handlers`
 
-Define the action that needs to be taken (which stores need to get updated, how, and under what conditions) when a given `Msg` is received.
+Defines the action that needs to be taken (which stores need to get updated, how, and under what conditions) when a given `Msg` is received.
 
 In this application you will have two types of `Msgs` that users can send to interact with the application state. They will each have an associated `Handler`:
 
-* [`SetName`](./tutorial/set-name.md) - used to set the `value` of a `name` that is owned by the user
-* [`BuyName`](./tutorial/buy-name.md) - used to buy a new `name` with `sdk.Coins` from an `address`
+* [`SetName`](./set-name.md) - used to set the `value` of a `name` that is owned by the user
+* [`BuyName`](./buy-name.md) - used to buy a new `name` with `sdk.Coins` from an `address`
 
-This completes the core logic of your `nameservice`. The next sections will focus on the rest of the core module. After that we focus on building an app using that module. In most cases, you'll be using similar boilerplate as well.
+This completes the core logic of your `nameservice`. The next sections will focus on the rest of the core module. After that, focus shifts on building an app using your new module. In most cases, you'll be using similar boilerplate as well.
+
+### Now that you have your `Msgs` and `Handlers` defined it's time to learn about making the data these transactions [available for querying](./queriers.md)!

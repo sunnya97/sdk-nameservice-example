@@ -12,17 +12,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	app "github.com/sunnya97/sdk-nameservice-example"
-
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	app "github.com/jackzampolin/sdk-nameservice-example"
+	nameservicecmd "github.com/jackzampolin/sdk-nameservice-example/x/nameservice/client/cli"
 	faucetcmd "github.com/sunnya97/sdk-faucet-module/client/cli"
-	nameservicecmd "github.com/sunnya97/sdk-nameservice-example/x/nameservice/client/cli"
 )
 
 const storeAcc = "acc"
-const storeNSnames = "ns_names"
-const storeNSowners = "ns_owners"
-const storeNSprices = "ns_prices"
 
 var (
 	rootCmd = &cobra.Command{

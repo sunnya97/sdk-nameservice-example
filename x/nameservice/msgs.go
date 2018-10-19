@@ -15,7 +15,7 @@ type MsgSetName struct {
 
 // NewSetNameMsg is a constructor function for MsgSetName
 func NewMsgSetName(name string, value string, owner sdk.AccAddress) MsgSetName {
-	return MsgBuyName{
+	return MsgSetName{
 		NameID: name,
 		Value:  value,
 		Owner:  owner,
@@ -34,7 +34,7 @@ func (msg MsgSetName) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress(msg.Owner.String())
 	}
 	if len(msg.NameID) == 0 || len(msg.Value) == 0 {
-		return sdk.ErrUnknownRequest("Name and Value cannot be empty")
+		return sdk.ErrUnknownRequest("Name and/or Value cannot be empty")
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func (msg MsgBuyName) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress(msg.Buyer.String())
 	}
 	if len(msg.NameID) == 0 {
-		return sdk.ErrUnknownRequest("Name and Value cannot be empty")
+		return sdk.ErrUnknownRequest("Name cannot be empty")
 	}
 	if !msg.Bid.IsPositive() {
 		return sdk.ErrInsufficientCoins("Bids must be positive")

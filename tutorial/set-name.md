@@ -2,7 +2,7 @@
 
 ## `Msg`
 
-The naming convention for SDK `Msgs` is `Msg{{ .Action }}`. The first action to implement is `SetName` so start by defining `MsgSetName` in a new file called `./x/nameservice/msgs.go` in the `nameservice` package, a `Msg` that allows owner of an address to set the result of resolving a name.
+The naming convention for SDK `Msgs` is `Msg{{ .Action }}`. The first action to implement is `SetName`, a `Msg` that allows owner of an address to set the result of resolving a name. Start by defining `MsgSetName` in a new file called `./x/nameservice/msgs.go`:
 
 ```go
 // MsgSetName defines a SetName message
@@ -22,12 +22,14 @@ func NewMsgSetName(name string, value string, owner sdk.AccAddress) MsgSetName {
 }
 ```
 
-The `MsgSetName` has three attributes:
+The `MsgSetName` has the three attributes needed to set the value for a name:
 - `name` - The name trying to be set
 - `value` - What the name resolves to
 - `owner` - The owner of that name
 
-Note the field name is `NameID` rather than `Name` as `.Name()` is the name of a method on the `Msg` interface.  This will be resolved in a [future update of the SDK](https://github.com/cosmos/cosmos-sdk/issues/2456).
+> _*Note*_: the field name is `NameID` rather than `Name` as `.Name()` is the name of a method on the `Msg` interface.  This will be resolved in a [future update of the SDK](https://github.com/cosmos/cosmos-sdk/issues/2456).
+
+Next, implement the `Msg` interface:
 
 ```go
 // Type should return the name of the module
@@ -37,24 +39,25 @@ func (msg MsgSetName) Type() string { return "nameservice" }
 func (msg MsgSetName) Name() string { return "set_name"}
 ```
 
-These functions are used by the SDK to route `Msgs` to the proper module for handling. They also add human readable names to tags. 
+These functions are used by the SDK to route `Msgs` to the proper module for handling. They also add human readable names to tags.
 
 ```go
-// Implements Msg.
+// ValdateBasic Implements Msg.
 func (msg MsgSetName) ValidateBasic() sdk.Error {
 	if msg.Owner.Empty() {
 		return sdk.ErrInvalidAddress(msg.Owner.String())
 	}
 	if len(msg.NameID) == 0 || len(msg.Value) == 0 {
-		return sdk.ErrUnknownRequest("Name and Value cannot be empty")
+		return sdk.ErrUnknownRequest("Name and/or Value cannot be empty")
 	}
 	return nil
 }
 ```
-This is used to provide some basic *stateless* checks on the validity of the msg.  In this case, we check that none of the attributes are empty.
+
+`ValidateBasic` is used to provide some basic *stateless* checks on the validity of the msg.  In this case, we check that none of the attributes are empty. Note the use of the `sdk.Err*` types here. The SDK provides a set of error types that are frequently encountered by application developers.
 
 ```go
-// Implements Msg.
+// GetSignBytes Implements Msg.
 func (msg MsgSetName) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
@@ -63,21 +66,23 @@ func (msg MsgSetName) GetSignBytes() []byte {
 	return sdk.MustSortJSON(b)
 }
 ```
-This defines how the Msg gets encoded for signing.  This should usually be in JSON and should not be modified in most cases.
+
+`GetSignBytes` defines how the Msg gets encoded for signing.  In most cases this means marshal to sorted JSON. The output should not be modified.
 
 ```go
-// Implements Msg.
+// GetSigners Implements Msg.
 func (msg MsgSetName) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 ```
-This allows the Msg to define who's signature is required on a Tx in order for it to be valid.  In this case, for example, the `MsgSetName` requires that the `Owner` sign the transaction trying to reset what the name points to.
 
-#### Handler
+`GetSigners` allows the Msg to define who's signature is required on a Tx in order for it to be valid.  In this case, for example, the `MsgSetName` requires that the `Owner` sign the transaction trying to reset what the name points to.
 
-Now that we have the `MsgSetName` defined, we now have to define the handler that actually executes the Msg.
+## `Handler`
 
-In a new file called `handler.go` in the `nameservice` package, we start off with:
+Now that `MsgSetName` is defined, the next step is to define what action(s) needs to be taken when this message is received through a `Handler`.
+
+In a new file (`./x/nameservice/handler.go`) start with the following code:
 
 ```go
 package nameservice
@@ -103,9 +108,11 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 ```
 
-This is essentially a subrouter that directs messages coming into this module to the proper handler for the message.  At the moment, we only have one Msg/Handler.
+`NewHandler` is essentially a sub-router that directs messages coming into this module to the proper handler for the message. At the moment your app only has one Msg/Handler.
 
-In the same file, we define the function `handleMsgSetName`.
+Now that have our module's `Handler`, define the `handleMsgSetName` function:
+
+> _*NOTE*_: The naming convention for handler names in the SDK is `handleMsg{{ .Action }}`
 
 ```go
 // Handle MsgSetName
@@ -117,4 +124,7 @@ func handleMsgSetName(ctx sdk.Context, keeper Keeper, msg MsgSetName) sdk.Result
 	return sdk.Result{}                      // return
 }
 ```
-In this function we check to see if the Msg sender is actually the owner of the name (which we get using `keeper.GetOwner`).  If so, we let them set the name by calling the function on the keeper.  If not, we throw an error.
+
+In this function, check to see if the `Msg` sender is actually the owner of the name (`keeper.GetOwner`).  If so, let them set the name by calling the function on the keeper.  If not, throw an error and return that to the user.
+
+### Next its time to [define the `BuyName` action](./buy-name.md)!

@@ -1,32 +1,40 @@
 ## App.go
 
-Next, in the root of our project directory, let's create a new file called `app.go`.  At the top of the file, let's declare the package and import our dependencies.
+To create your application start a new file: `./app.go`. To get started add the dependencies you will need:
+
+> _*NOTE*_: Your application needs to import the code you just wrote. Here the import path is set to this repository (`github.com/jackzampolin/sdk-nameservice-example/x/nameservice`). If you are following along in your own repo you will need to change the import path to reflect that (`github.com/{{ .Username }}/{{ .Project.Repo }}/x/nameservice`).
 
 ```go
 package app
 
 import (
-	"os"
+	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/jackzampolin/sdk-nameservice-example/x/nameservice"
+
+	bam "github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	faucet "github.com/sunnya97/sdk-faucet-module"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	faucet "github.com/sunnya97/sdk-faucet-module"
-	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
 )
 ```
 
-Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the four modules we will use in our app: `auth`, `bank`, `faucet` and `nameservice`.
+Links to godocs for each module:
+- [`codec`](https://godoc.org/github.com/cosmos/cosmos-sdk/codec): Functions for working with amino
+- [`auth`](https://godoc.org/github.com/cosmos/cosmos-sdk/x/auth)
+- [`bank`](https://godoc.org/github.com/cosmos/cosmos-sdk/x/bank)
+- [`baseapp`](https://godoc.org/github.com/cosmos/cosmos-sdk): This module helps developers bootstrap CosmosSDK applications
+- [`types`](https://godoc.org/github.com/cosmos/cosmos-sdk): Common types for working with SDK applications
+- [`abci`](https://godoc.org/github.com/tendermint/tendermint/abci/types): Similar to the `sdk/types` module, but for Tendermint
+- [`cmn`](https://godoc.org/github.com/tendermint/tendermint/libs/common): Code for working with Tendermint applications
+- [`dbm`](https://godoc.org/github.com/tendermint/tendermint/libs/db): Code for working with the Tendermint database
 
-Next we'll declare the name and struct for our app.  In this example, we'll call it nameservice, a portmanteau of Handshake and Namecoin.
+Start by declaring the name and struct for our app.  In this tutorial the app is called `nameservice`.
 
 ```go
 const (
@@ -49,7 +57,13 @@ type nameserviceApp struct {
 }
 ```
 
-Now we will create a constructor for a new HandshakeApp.  In this, we will generate all storeKeys and Keepers.  We will register the routes, mount the stores, and set the initChainer (explained next).
+Next, create a constructor for a new `nameserviceApp`.  In this function your application:
+- Generates `storeKeys`
+- Creates `Keepers`
+- Registers `Handler`s
+- Registers `Querier`s
+- Mounts `KVStore`s
+- Sets the `initChainer`
 
 ```go
 func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
@@ -109,9 +123,10 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 }
 ```
 
-Next, we'll add an initChainer function so we can generate accounts with initial balance from the `genesis.json`.
+The `initChainer` defines how accounts in `genesis.json` are mapped into the application state on initial chain start. The constructor registers the `initChainer` function, but it isn't defined yet. Go ahead and create it:
 
 ```go
+// GenesisState represents chain state at the start of the chain. Any initial state (account balances) are stored here.
 type GenesisState struct {
 	Accounts []auth.BaseAccount `json:"accounts"`
 }
@@ -132,9 +147,10 @@ func (app *nameserviceApp) initChainer(ctx sdk.Context, req abci.RequestInitChai
 
 	return abci.ResponseInitChain{}
 }
+
 ```
 
-And finally, a helper function to generate an amino codec.
+Finally add a helper function to generate an amino [`*codec.Codec`](https://godoc.org/github.com/cosmos/cosmos-sdk/codec#Codec) that properly registers all of the modules used in your application:
 
 ```go
 func MakeCodec() *codec.Codec {
@@ -148,3 +164,5 @@ func MakeCodec() *codec.Codec {
 	return cdc
 }
 ```
+
+### Now that you have created an application that includes your module, it's time to [build your entrypoints](./entrypoint.md)!

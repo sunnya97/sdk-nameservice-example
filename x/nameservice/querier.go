@@ -2,6 +2,7 @@ package nameservice
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
@@ -12,6 +13,7 @@ const (
 	QueryWhois   = "whois"
 )
 
+// NewQuerier is the module level router for state queries
 func NewQuerier(keeper Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) (res []byte, err sdk.Error) {
 		switch path[0] {
@@ -38,6 +40,7 @@ func queryResolve(ctx sdk.Context, path []string, req abci.RequestQuery, keeper 
 	return []byte(value), nil
 }
 
+// Whois represents a name -> value lookup
 type Whois struct {
 	Value string         `json:"value"`
 	Owner sdk.AccAddress `json:"owner"`

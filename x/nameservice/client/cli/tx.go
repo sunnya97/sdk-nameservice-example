@@ -5,21 +5,16 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/jackzampolin/sdk-nameservice-example/x/nameservice"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-
-	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
 )
 
-const (
-	flagName   = "name"
-	flagValue  = "value"
-	flagAmount = "amount"
-)
-
+// GetCmdBuyName is the CLI command for sending a BuyName transaction
 func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "buy-name [name] [amount]",
 		Short: "bid for existing name or claim new name",
 		Args:  cobra.ExactArgs(2),
@@ -32,10 +27,7 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			name := args[0]
-
-			amount := args[1]
-			coins, err := sdk.ParseCoins(amount)
+			coins, err := sdk.ParseCoins(args[1])
 			if err != nil {
 				return err
 			}
@@ -45,14 +37,12 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := nameservice.MsgBuyName{
-				NameID: name,
-				Bid:    coins,
-				Buyer:  account,
-			}
-
 			tx := auth.StdTx{
-				Msgs: []sdk.Msg{msg},
+				Msgs: []sdk.Msg{nameservice.MsgBuyName{
+					NameID: args[0],
+					Bid:    coins,
+					Buyer:  account,
+				}},
 			}
 
 			bz := cdc.MustMarshalBinary(tx)
@@ -62,12 +52,11 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 			return err
 		},
 	}
-
-	return cmd
 }
 
+// GetCmdSetName is the CLI command for sending a SetName transaction
 func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "set-name [name] [value]",
 		Short: "set the value associated with a name that you own",
 		Args:  cobra.ExactArgs(2),
@@ -80,22 +69,17 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			name := args[0]
-			value := args[1]
-
 			account, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
 
-			msg := nameservice.MsgSetName{
-				NameID: name,
-				Value:  value,
-				Owner:  account,
-			}
-
 			tx := auth.StdTx{
-				Msgs: []sdk.Msg{msg},
+				Msgs: []sdk.Msg{nameservice.MsgSetName{
+					NameID: args[0],
+					Value:  args[1],
+					Owner:  account,
+				}},
 			}
 
 			bz := cdc.MustMarshalBinary(tx)
@@ -105,6 +89,4 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 			return err
 		},
 	}
-
-	return cmd
 }

@@ -1,19 +1,19 @@
 package app
 
 import (
+	"github.com/tendermint/tendermint/libs/log"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/jackzampolin/sdk-nameservice-example/x/nameservice"
+
+	bam "github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	faucet "github.com/sunnya97/sdk-faucet-module"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-
-	faucet "github.com/sunnya97/sdk-faucet-module"
-	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
 )
 
 const (
@@ -35,6 +35,7 @@ type nameserviceApp struct {
 	nsKeeper      nameservice.Keeper
 }
 
+// NewnameserviceApp is a constructor function for nameserviceApp
 func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 	cdc := MakeCodec()
 	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc))
@@ -91,6 +92,7 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 	return app
 }
 
+// GenesisState represents chain state at the start of the chain. Any initial state (account balances) are stored here.
 type GenesisState struct {
 	Accounts []auth.BaseAccount `json:"accounts"`
 }
@@ -112,6 +114,7 @@ func (app *nameserviceApp) initChainer(ctx sdk.Context, req abci.RequestInitChai
 	return abci.ResponseInitChain{}
 }
 
+// MakeCodec generates the necessary codecs for Amino
 func MakeCodec() *codec.Codec {
 	var cdc = codec.New()
 	auth.RegisterCodec(cdc)
