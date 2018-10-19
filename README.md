@@ -26,23 +26,27 @@ All of the final source code for this tutorial project is in this directory (and
 
 ### Build the `nameservice` application!
 
-Start by installing Dep.
+If you want to build the `nameservice` application in this repo to see the functionality, first you need to install `dep`. Below there is a command for using a shell script from `dep`'s site to preform this install. If you are uncomfortable `|`ing `curl` output to `sh` (you should be) then check out [your platform specific installation instructions](https://golang.github.io/dep/docs/installation.html).
 
-```
-go get -v github.com/golang/dep/cmd/dep
+```bash
+# Install dep
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
+# Initialize dep and install dependencies
+dep init
+dep ensure -v -upgrade
+
+# Install the app into your $GOBIN
+go install -v ./cmd/...
+
+# Now you should be able to run the following commands:
+nameserviced help
+nameservicecli help
 ```
 
-Next, run
+### Using `nameservicecli`
 
-```
-dep ensure
-```
-
-Finally run
-
-```
-make install
-```
+TODO: Write a list of the interactions that are enabled with the `nameservice` module and commands that are enabled by them
 
 ### Project directory structure
 
@@ -51,12 +55,11 @@ Through the course of this tutorial you will create the following files that mak
 ```bash
 ./nameservice
 ├── Gopkg.toml
-├── Makefile
 ├── app.go
 ├── cmd
-│   ├── nameshakecli
+│   ├── nameservicecli
 │   │   └── main.go
-│   └── nameshaked
+│   └── nameserviced
 │       └── main.go
 └── x
     └── nameservice
