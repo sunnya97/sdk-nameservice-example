@@ -26,10 +26,10 @@ const storeNSprices = "ns_prices"
 
 var (
 	rootCmd = &cobra.Command{
-		Use:   "nameshakecli",
-		Short: "Nameshake Client",
+		Use:   "nameservicecli",
+		Short: "nameservice Client",
 	}
-	DefaultCLIHome = os.ExpandEnv("$HOME/.nameshakecli")
+	DefaultCLIHome = os.ExpandEnv("$HOME/.nameservicecli")
 )
 
 func main() {

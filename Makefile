@@ -19,5 +19,5 @@ get_vendor_deps:
 	@dep ensure -v -vendor-only
 
 install:
-	go install ./cmd/nameshaked
-	go install ./cmd/nameshakecli
+	go install ./cmd/nameserviced
+	go install ./cmd/nameservicecli

@@ -18,7 +18,7 @@ import (
 	app "github.com/sunnya97/sdk-nameservice-example"
 )
 
-var DefaultNodeHome = os.ExpandEnv("$HOME/.nameshaked")
+var DefaultNodeHome = os.ExpandEnv("$HOME/.nameserviced")
 
 var appInit = server.AppInit{
 	AppGenState: server.SimpleAppGenState,
@@ -30,14 +30,14 @@ func main() {
 	ctx := server.NewDefaultContext()
 	cobra.EnableCommandSorting = false
 	rootCmd := &cobra.Command{
-		Use:               "nameshaked",
-		Short:             "Nameshake App Daemon (server)",
+		Use:               "nameserviced",
+		Short:             "nameservice App Daemon (server)",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 
 	server.AddCommands(ctx, cdc, rootCmd, appInit,
-		server.ConstructAppCreator(newApp, "nameshake"),
-		server.ConstructAppExporter(exportAppStateAndTMValidators, "nameshake"))
+		server.ConstructAppCreator(newApp, "nameservice"),
+		server.ConstructAppExporter(exportAppStateAndTMValidators, "nameservice"))
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "NS", DefaultNodeHome)
@@ -49,7 +49,7 @@ func main() {
 }
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application {
-	return app.NewNameshakeApp(logger, db)
+	return app.NewnameserviceApp(logger, db)
 }
 
 func exportAppStateAndTMValidators(
