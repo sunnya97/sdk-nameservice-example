@@ -14,7 +14,7 @@ type MsgSetName struct {
 
 // NewSetNameMsg is a constructor function for MsgSetName
 func NewMsgSetName(name string, value string, owner sdk.AccAddress) MsgSetName {
-	return MsgBuyName{
+	return MsgSetName{
 		NameID: name,
 		Value:  value,
 		Owner:  owner,

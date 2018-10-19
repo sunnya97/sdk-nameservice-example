@@ -36,7 +36,7 @@ func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			fmt.Println(string(res))
 
 			return nil
-		}
+		},
 	}
 }
 
@@ -58,7 +58,7 @@ func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			fmt.Println(string(res))
 
 			return nil
-		}
+		},
 	}
 }
 ```
@@ -124,7 +124,7 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 			_, err = cliCtx.BroadcastTx(bz)
 
 			return err
-		}
+		},
 	}
 }
 
@@ -161,7 +161,7 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 			_, err = cliCtx.BroadcastTx(bz)
 
 			return err
-		}
+		},
 	}
 }
 ```
