@@ -50,7 +50,7 @@
 
 [[projects]]
   branch = "develop"
-  digest = "1:a5982c3f10af5e923bc92dd919dc097e3e47fffd2ec2139ea84ecb1f7ea5ae82"
+  digest = "1:03379e6cfc96cbafcda4700f3a132de4814617e0080bc50feb4d3e92fd304c7c"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -60,6 +60,8 @@
     "client/rpc",
     "client/tx",
     "client/utils",
+    "cmd/gaia/app",
+    "cmd/gaia/init",
     "codec",
     "crypto",
     "crypto/keys",
@@ -74,9 +76,26 @@
     "x/auth/client/cli",
     "x/auth/client/txbuilder",
     "x/bank",
+    "x/distribution",
+    "x/distribution/keeper",
+    "x/distribution/tags",
+    "x/distribution/types",
+    "x/gov",
+    "x/gov/tags",
+    "x/mint",
+    "x/mock",
+    "x/params",
+    "x/params/subspace",
+    "x/slashing",
+    "x/stake",
+    "x/stake/client/cli",
+    "x/stake/keeper",
+    "x/stake/querier",
+    "x/stake/tags",
+    "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "b48d0d56239411788fd64d5ab287fbabc60b3aef"
+  revision = "57277d11431a7cd1de313ef9325446dfcd5a057c"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -429,12 +448,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9a787354a69c1cf045fc34d5cf336926e558671d798f55cad3d142281eedbb09"
+  digest = "1:3a2cf43a4a86e27e897a3e9746ac14c93b6336adf478433d63d2c2c282c88a7c"
   name = "github.com/sunnya97/sdk-faucet-module"
-  packages = [
-    ".",
-    "client/cli",
-  ]
+  packages = ["client/cli"]
   pruneopts = "UT"
   revision = "938905e9931485a00988ba90a5ce65817fbeb8b7"
 
@@ -706,20 +722,24 @@
     "github.com/cosmos/cosmos-sdk/client/keys",
     "github.com/cosmos/cosmos-sdk/client/rpc",
     "github.com/cosmos/cosmos-sdk/client/tx",
+    "github.com/cosmos/cosmos-sdk/client/utils",
+    "github.com/cosmos/cosmos-sdk/cmd/gaia/init",
     "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/server",
     "github.com/cosmos/cosmos-sdk/types",
     "github.com/cosmos/cosmos-sdk/x/auth",
     "github.com/cosmos/cosmos-sdk/x/auth/client/cli",
+    "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder",
     "github.com/cosmos/cosmos-sdk/x/bank",
     "github.com/spf13/cobra",
-    "github.com/sunnya97/sdk-faucet-module",
+    "github.com/spf13/viper",
     "github.com/sunnya97/sdk-faucet-module/client/cli",
     "github.com/tendermint/tendermint/abci/types",
     "github.com/tendermint/tendermint/libs/cli",
     "github.com/tendermint/tendermint/libs/common",
     "github.com/tendermint/tendermint/libs/db",
     "github.com/tendermint/tendermint/libs/log",
+    "github.com/tendermint/tendermint/p2p",
     "github.com/tendermint/tendermint/types",
   ]
   solver-name = "gps-cdcl"

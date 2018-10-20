@@ -44,9 +44,35 @@ nameserviced help
 nameservicecli help
 ```
 
-### Using `nameservicecli`
+### Running the live network and using the commands with `nameservicecli`
 
-TODO: Write a list of the interactions that are enabled with the `nameservice` module and commands that are enabled by them
+To initialize configuration and a `genesis.json` file for your application and an account for the transactions start by running:
+
+> _*NOTE*_: Copy the `Address` output here and save it for later use
+
+```bash
+# Copy the chain_id output here and save it for later use
+nameserviced init
+
+# Copy the `Address` output here and save it for later use
+nameservicecli keys add jack
+```
+
+Next open the generated file `~/.nameserviced/config/genesis.json` in a text editor and copy in the address output by adding a key. This will give you control over a wallet with some coins when you start your local network. You can now start `nameserviced` by calling `nameserviced start`. You will see blocks being produced.
+
+Open another terminal to run commands against the network you have just created:
+
+> _*NOTE*_: In the below commands `--chain-id` and `accountaddr` are pulled using terminal utilities. You can also just input the raw strings saved from bootstrapping the network above. The commands require `jq` to be installed on your machine.
+
+```bash
+# First check the account to ensure you have funds
+nameservicecli query account $(nameservicecli keys list -o json | jq -r .[0].address) --chain-id $(cat ~/.nameserviced/config/genesis.json | jq -r .chain_id)
+
+# Buy your first name using your coins!
+nameservicecli tx jack.id 1mycoin --from $(nameservicecli keys list -o json | jq -r .[0].address) --chain-id $(cat ~/.nameserviced/config/genesis.json | jq -r .chain_id)
+
+```
+
 
 ### Project directory structure
 

@@ -10,7 +10,6 @@ import (
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	faucet "github.com/sunnya97/sdk-faucet-module"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -24,15 +23,17 @@ type nameserviceApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
-	keyMain     *sdk.KVStoreKey
-	keyAccount  *sdk.KVStoreKey
-	keyNSnames  *sdk.KVStoreKey
-	keyNSowners *sdk.KVStoreKey
-	keyNSprices *sdk.KVStoreKey
+	keyMain          *sdk.KVStoreKey
+	keyAccount       *sdk.KVStoreKey
+	keyNSnames       *sdk.KVStoreKey
+	keyNSowners      *sdk.KVStoreKey
+	keyNSprices      *sdk.KVStoreKey
+	keyFeeCollection *sdk.KVStoreKey
 
-	accountMapper auth.AccountMapper
-	bankKeeper    bank.Keeper
-	nsKeeper      nameservice.Keeper
+	accountMapper       auth.AccountMapper
+	bankKeeper          bank.Keeper
+	feeCollectionKeeper auth.FeeCollectionKeeper
+	nsKeeper            nameservice.Keeper
 }
 
 // NewnameserviceApp is a constructor function for nameserviceApp
@@ -44,11 +45,12 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 		BaseApp: bApp,
 		cdc:     cdc,
 
-		keyMain:     sdk.NewKVStoreKey("main"),
-		keyAccount:  sdk.NewKVStoreKey("acc"),
-		keyNSnames:  sdk.NewKVStoreKey("ns_names"),
-		keyNSowners: sdk.NewKVStoreKey("ns_owners"),
-		keyNSprices: sdk.NewKVStoreKey("ns_prices"),
+		keyMain:          sdk.NewKVStoreKey("main"),
+		keyAccount:       sdk.NewKVStoreKey("acc"),
+		keyNSnames:       sdk.NewKVStoreKey("ns_names"),
+		keyNSowners:      sdk.NewKVStoreKey("ns_owners"),
+		keyNSprices:      sdk.NewKVStoreKey("ns_prices"),
+		keyFeeCollection: sdk.NewKVStoreKey("fee_collection"),
 	}
 
 	app.accountMapper = auth.NewAccountMapper(
@@ -59,6 +61,8 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 
 	app.bankKeeper = bank.NewBaseKeeper(app.accountMapper)
 
+	app.feeCollectionKeeper = auth.NewFeeCollectionKeeper(cdc, app.keyFeeCollection)
+
 	app.nsKeeper = nameservice.NewKeeper(
 		app.bankKeeper,
 		app.keyNSnames,
@@ -67,9 +71,10 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 		app.cdc,
 	)
 
+	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
+
 	app.Router().
-		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
-		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
+		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper))
 
 	app.QueryRouter().
 		AddRoute("nameservice", nameservice.NewQuerier(app.nsKeeper))
@@ -120,7 +125,6 @@ func MakeCodec() *codec.Codec {
 	auth.RegisterCodec(cdc)
 	bank.RegisterCodec(cdc)
 	nameservice.RegisterCodec(cdc)
-	faucet.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	return cdc
