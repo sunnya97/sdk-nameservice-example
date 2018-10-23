@@ -54,6 +54,11 @@ Golang has a few dependency management tools. In this tutorial you will be using
   name = "github.com/tendermint/tendermint"
   version = "=0.25.0"
 
+[[override]]
+  name = "golang.org/x/crypto"
+  source = "https://github.com/tendermint/crypto"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+
 [prune]
   go-tests = true
   unused-packages = true
@@ -61,7 +66,9 @@ Golang has a few dependency management tools. In this tutorial you will be using
 
 ## Building
 
-First, you need to install `dep`. Below there is a command for using a shell script from `dep`'s site to preform this install. If you are uncomfortable `|`ing `curl` output to `sh` (you should be) then check out [your platform specific installation instructions](https://golang.github.io/dep/docs/installation.html).
+First, you need to install `dep`. Below there is a command for using a shell script from `dep`'s site to preform this install.
+
+> _*NOTE*_: If you are uncomfortable `|`ing `curl` output to `sh` (you should be) then check out [your platform specific installation instructions](https://golang.github.io/dep/docs/installation.html).
 
 ```bash
 # Install dep

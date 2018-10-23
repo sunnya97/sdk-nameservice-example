@@ -50,7 +50,7 @@
 
 [[projects]]
   branch = "develop"
-  digest = "1:03379e6cfc96cbafcda4700f3a132de4814617e0080bc50feb4d3e92fd304c7c"
+  digest = "1:4bc74f80d240c4db4b950a2ab27fa262c531b5b664546fd7f80c5ea4f88d3a75"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -95,7 +95,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "57277d11431a7cd1de313ef9325446dfcd5a057c"
+  revision = "5aae4740db678ad13627d16722b11d46835f91f4"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -221,12 +221,13 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:4279bed54157d98fd3f17f125db778e2498132acf9225f3088611e08c8e45153"
+  digest = "1:0c6aceca32885ed17808af2ad3a85f2cf18aca1a49b25de4a1d54f03913128c0"
   name = "github.com/hashicorp/hcl"
   packages = [
     ".",
     "hcl/ast",
     "hcl/parser",
+    "hcl/printer",
     "hcl/scanner",
     "hcl/strconv",
     "hcl/token",
@@ -354,7 +355,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4925a845da1dfa7a83a39902ad01537d501fa40b9c1a4cc9fa73a4adc85da843"
+  digest = "1:7fceb50b560fede33fe9f87e29721d350d1a092909e813e26686c1ca5d7fe5c3"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
@@ -362,7 +363,7 @@
     "model",
   ]
   pruneopts = "UT"
-  revision = "16b4535ad14a9ef20a9d9fd8055143c5faa15224"
+  revision = "7e9e6cabbd393fc208072eedef99188d0ce788b6"
 
 [[projects]]
   branch = "master"
@@ -589,8 +590,7 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:8c3222fc14af6462eec2f3bb062b730d802f67fe6022758773f70f9e8f3d5c36"
+  digest = "1:cba18c5614964311aa882d5cdc222a58f2d8d34620823c19ce75910290c45fa9"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -610,7 +610,8 @@
     "salsa20/salsa",
   ]
   pruneopts = "UT"
-  revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+  source = "https://github.com/tendermint/crypto"
 
 [[projects]]
   digest = "1:04dda8391c3e2397daf254ac68003f30141c069b228d06baec8324a5f81dc1e9"
@@ -630,14 +631,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b2a992ecc90e1370ca604c52ff49b67bd451b69e1a0582c2e43dce7df838e828"
+  digest = "1:fe45be8fddd2d82243756e79b05ea83afddd150d202cee955180f0b4aa8b23ce"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
   ]
   pruneopts = "UT"
-  revision = "8e24a49d80f82323e1c4db1b5da3e0f31171a151"
+  revision = "8a28ead16f52c8aaeffbf79239b251dfdf6c4f96"
 
 [[projects]]
   digest = "1:7509ba4347d1f8de6ae9be8818b0cd1abc3deeffe28aeaf4be6d4b6b5178d9ca"

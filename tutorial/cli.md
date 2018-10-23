@@ -26,7 +26,7 @@ func GetCmdResolveName(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-      name := args[0]
+			name := args[0]
 
 			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/resolve/%s", queryRoute, name), nil)
 			if err != nil {
@@ -49,7 +49,7 @@ func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-      name := args[0]
+			name := args[0]
 
 			res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/whois/%s", queryRoute, name), nil)
 			if err != nil {
@@ -81,12 +81,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/jackzampolin/sdk-nameservice-example/x/nameservice"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 )
 
 // GetCmdBuyName is the CLI command for sending a BuyName transaction
@@ -99,6 +100,8 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 
 			if err := cliCtx.EnsureAccountExists(); err != nil {
 				return err
@@ -114,19 +117,15 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			tx := auth.StdTx{
-				Msgs: []sdk.Msg{nameservice.MsgBuyName{
-					NameID: args[0],
-					Bid:    coins,
-					Buyer:  account,
-				}},
+			msg := nameservice.NewMsgBuyName(args[0], coins, account)
+			err = msg.ValidateBasic()
+			if err != nil {
+				return err
 			}
 
-			bz := cdc.MustMarshalBinary(tx)
+			cliCtx.PrintResponse = true
 
-			_, err = cliCtx.BroadcastTx(bz)
-
-			return err
+			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
 	}
 }
@@ -142,6 +141,8 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 				WithCodec(cdc).
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
+			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
+
 			if err := cliCtx.EnsureAccountExists(); err != nil {
 				return err
 			}
@@ -151,19 +152,15 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			tx := auth.StdTx{
-				Msgs: []sdk.Msg{nameservice.MsgSetName{
-					NameID: args[0],
-					Value:  args[1],
-					Owner:  account,
-				}},
+			msg := nameservice.NewMsgSetName(args[0], args[1], account)
+			err = msg.ValidateBasic()
+			if err != nil {
+				return err
 			}
 
-			bz := cdc.MustMarshalBinary(tx)
+			cliCtx.PrintResponse = true
 
-			_, err = cliCtx.BroadcastTx(bz)
-
-			return err
+			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
 	}
 }

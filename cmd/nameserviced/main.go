@@ -102,7 +102,7 @@ func InitCmd(ctx *server.Context, cdc *codec.Codec, appInit server.AppInit) *cob
 
 			toPrint := struct {
 				ChainID    string          `json:"chain_id"`
-				NodeID     string          `json:"noide_id"`
+				NodeID     string          `json:"node_id"`
 				AppMessage json.RawMessage `json:"app_message"`
 			}{
 				chainID,

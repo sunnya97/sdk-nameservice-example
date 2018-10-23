@@ -30,7 +30,7 @@ type nameserviceApp struct {
 	keyNSprices      *sdk.KVStoreKey
 	keyFeeCollection *sdk.KVStoreKey
 
-	accountMapper       auth.AccountMapper
+	accountKeeper       auth.AccountKeeper
 	bankKeeper          bank.Keeper
 	feeCollectionKeeper auth.FeeCollectionKeeper
 	nsKeeper            nameservice.Keeper
@@ -53,13 +53,13 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 		keyFeeCollection: sdk.NewKVStoreKey("fee_collection"),
 	}
 
-	app.accountMapper = auth.NewAccountMapper(
+	app.accountKeeper = auth.NewAccountKeeper(
 		app.cdc,
 		app.keyAccount,
 		auth.ProtoBaseAccount,
 	)
 
-	app.bankKeeper = bank.NewBaseKeeper(app.accountMapper)
+	app.bankKeeper = bank.NewBaseKeeper(app.accountKeeper)
 
 	app.feeCollectionKeeper = auth.NewFeeCollectionKeeper(cdc, app.keyFeeCollection)
 
@@ -71,7 +71,7 @@ func NewnameserviceApp(logger log.Logger, db dbm.DB) *nameserviceApp {
 		app.cdc,
 	)
 
-	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
+	app.SetAnteHandler(auth.NewAnteHandler(app.accountKeeper, app.feeCollectionKeeper))
 
 	app.Router().
 		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper))
@@ -112,8 +112,8 @@ func (app *nameserviceApp) initChainer(ctx sdk.Context, req abci.RequestInitChai
 	}
 
 	for _, acc := range genesisState.Accounts {
-		acc.AccountNumber = app.accountMapper.GetNextAccountNumber(ctx)
-		app.accountMapper.SetAccount(ctx, &acc)
+		acc.AccountNumber = app.accountKeeper.GetNextAccountNumber(ctx)
+		app.accountKeeper.SetAccount(ctx, &acc)
 	}
 
 	return abci.ResponseInitChain{}
